@@ -69,8 +69,13 @@ static void sk6812(void *arg) {
         uint16_t expected_length;
         // First two bytes from the master contain the expected length, read that.
         uint8_t* expected_length_array = (uint8_t*) &expected_length;
-        while (uart_read_bytes(UART_NUM, &expected_length_array[0], 1, 100000 / portTICK_RATE_MS) != 1) {}
-        while (uart_read_bytes(UART_NUM, &expected_length_array[1], 1, 100000 / portTICK_RATE_MS) != 1) {}
+        while (uart_read_bytes(UART_NUM, &expected_length_array[0], 1, portMAX_DELAY) != 1) {}
+        while (uart_read_bytes(UART_NUM, &expected_length_array[1], 1, portMAX_DELAY) != 1) {}
+
+        if (expected_length >= MAXIMUM_CHANNELS) {
+          ESP_LOGE(TAG, "Expecting to many channels. May be: %d, is %d", MAXIMUM_CHANNELS, expected_length);
+          continue;
+        }
 
         // Read in all channels
         uint16_t length_left = expected_length;
@@ -110,7 +115,7 @@ void app_main() {
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
     };
     ESP_ERROR_CHECK(uart_param_config(UART_NUM, &uart_config));
-    ESP_ERROR_CHECK(uart_driver_install(UART_NUM, MAXIMUM_CHANNELS * 2, 0, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM, MAXIMUM_CHANNELS, 0, 0, NULL, 0));
     ESP_ERROR_CHECK(rmt_init());
     xTaskCreate(sk6812, "sk6812", 1024 * 2, (void *)0, 10, NULL);
 }
